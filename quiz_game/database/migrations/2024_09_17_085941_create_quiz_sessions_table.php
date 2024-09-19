@@ -17,8 +17,10 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->enum('status', ['active', 'completed'])->default('active');
             $table->integer('score')->default(0);
+            $table->boolean('is_completed')->default(false);
             $table->timestamp('started_at')->nullable();
             $table->timestamp('ended_at')->nullable();
+            $table->integer('temp_score')->default(0);  // Track the score during the quiz
             $table->timestamps();
             $table->softDeletes();
         });
