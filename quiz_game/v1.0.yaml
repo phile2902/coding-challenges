@@ -1,0 +1,360 @@
+openapi: 3.0.0
+info:
+  title: Quiz Game API
+  description: API for a quiz game
+  version: '1.0'
+servers:
+    - url: http://localhost:8080
+      description: Local server
+paths:
+  #Quizzes
+  /api/v1/quizzes/available:
+    get:
+      summary: Get all available quizzes for users. Users can select a quiz to play.
+      parameters:
+        - name: user_id
+          in: query
+          description: ID of the user who wants to see available quizzes
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of quizzes per page
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of available quizzes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Quiz'
+
+  /api/v1/quizzes/{quiz_id}/join:
+    get:
+      summary: Join a quiz to play
+      parameters:
+        - name: quiz_id
+          in: path
+          description: ID of the quiz
+          required: true
+          schema:
+            type: integer
+        - name: user_id
+          in: query
+          description: ID of the user who wants to join the quiz
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of questions for the quiz
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Question'
+        '403':
+          description: Forbidden. User does not have access to the quiz
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "You do not have access to this quiz"
+
+  /api/v1/quizzes/{quiz_id}/submit:
+    post:
+      summary: Submit to complete a quiz
+      parameters:
+        - name: quiz_id
+          in: path
+          description: ID of the quiz
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  example: 1
+                quiz_session_id:
+                  type: integer
+                  example: 1
+      responses:
+        '200':
+          description: Quiz results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Quiz completed successfully"
+        '403':
+          description: Forbidden. User does not have access to the quiz
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "You do not have access to this quiz"
+
+  /api/v1/quizzes/{quiz_id}/questions/{question_id}/answer:
+    post:
+      summary: Submit an answer to a question
+      parameters:
+        - name: quiz_id
+          in: path
+          description: ID of the quiz
+          required: true
+          schema:
+            type: integer
+        - name: question_id
+          in: path
+          description: ID of the question
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  example: 1
+                quiz_session_id:
+                  type: integer
+                  example: 1
+                option_id:
+                  type: string
+                  example: "Paris"
+      responses:
+        '201':
+          description: Answer submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAnswer'
+        '403':
+          description: Forbidden. User does not have access to the quiz
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "You do not have access to this quiz"
+
+# Leaderboard
+  /api/v1/leaderboard/global:
+    get:
+      summary: Get global leaderboard
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of users per page
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of users with their scores sorted by score
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user_id:
+                      type: integer
+                      example: 1
+                    total_score:
+                      type: integer
+                      example: 100
+                    user_name:
+                      type: string
+                      example: "John Doe"
+
+  /api/v1/leaderboard/quiz/{quiz_id}:
+    get:
+      summary: Get leaderboard for a specific quiz
+      parameters:
+        - name: quiz_id
+          in: path
+          description: ID of the quiz
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          description: Number of users per page
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: A list of users with their scores sorted by score
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        name:
+                          type: string
+                          example: "John Doe"
+                    quiz_id:
+                      type: integer
+                      example: 1
+                    score:
+                      type: integer
+                      example: 100
+
+components:
+  schemas:
+    Quiz:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "Quiz 1"
+        description:
+          type: string
+          example: "This is a quiz about animals"
+        duration:
+          type: integer
+          example: 600
+        created_by:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+
+    UserAnswer:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        quiz_session_id:
+          type: integer
+          example: 1
+        question_id:
+          type: integer
+          example: 1
+        selected_option_id:
+          type: integer
+          example: 1
+        is_correct:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        quiz_id:
+          type: integer
+          example: 1
+        question_text:
+          type: string
+          example: "What is the capital of France?"
+        question_type:
+          type: string
+          example: "multiple_choice"
+        score:
+          type: integer
+          example: 10
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/Option'
+
+    Option:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        question_id:
+          type: integer
+          example: 1
+        option_text:
+          type: string
+          example: "Paris"
+        created_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"

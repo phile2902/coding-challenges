@@ -6,7 +6,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class JoinQuizRequest extends FormRequest
+class GetAvailableQuizzesRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -17,6 +17,8 @@ class JoinQuizRequest extends FormRequest
     {
         return [
             'user_id' => 'required|numeric|exists:users,id',
+            'page' => 'numeric',
+            'per_page' => 'numeric',
         ];
     }
 }

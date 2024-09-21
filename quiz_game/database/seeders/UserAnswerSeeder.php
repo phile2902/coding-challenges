@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Option;
 use App\Models\Question;
+use App\Models\QuizSession;
 use App\Models\User;
 use App\Models\UserAnswer;
 use Carbon\Carbon;
@@ -16,17 +17,20 @@ class UserAnswerSeeder extends Seeder
      */
     public function run(): void
     {
-        $users = User::all();
-        $questions = Question::all();
+        $quizSession = QuizSession::all();
 
-        $users->each(function ($user) use ($questions) {
-            $questions->each(function ($question) use ($user) {
-                $option = Option::where('question_id', $question->id)->inRandomOrder()->first();
+        $quizSession->each(function ($session) {
+            $user = $session->user;
+            $quiz = $session->quiz;
+            $questions = $quiz->questions->random(5);
+            $questions->each(function ($question) use ($user, $session) {
+                $option = $question->options->random();
                 UserAnswer::create([
                     'user_id' => $user->id,
                     'question_id' => $question->id,
+                    'quiz_session_id' => $session->id,
                     'selected_option_id' => $option->id,
-                    'submitted_at' => Carbon::now(),
+                    'is_correct' => $option->is_correct,
                 ]);
             });
         });

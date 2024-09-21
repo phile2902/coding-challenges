@@ -4,17 +4,30 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Events\ScoreUpdated;
+use App\Events\UserJoinedQuiz;
+use App\Events\UserSubmittedQuiz;
+use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\QuizSession;
+use App\Models\UserAnswer;
+use App\Repositories\OptionRepository;
+use App\Repositories\Params\FindQuizSessionParam;
+use App\Repositories\Params\PutQuizSessionParam;
+use App\Repositories\Params\PutUserAnswerParam;
 use App\Repositories\QuizRepository;
 use App\Repositories\QuizSessionRepository;
+use App\Repositories\UserAnswerRepository;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class QuizService
 {
     public function __construct(
         private QuizRepository $quizRepository,
-        private QuizSessionRepository $quizSessionRepository
+        private QuizSessionRepository $quizSessionRepository,
+        private UserAnswerRepository $userAnswerRepository,
+        private OptionRepository $optionRepository
     ) {
     }
 
@@ -35,13 +48,26 @@ class QuizService
      * @return Collection
      * @throws \Exception
      */
-    public function getQuestions(int $quizId, int $userId)
+    public function joinQuiz(int $quizId, int $userId): Collection
     {
-        if ($this->quizSessionRepository->isCompletedByUser($quizId, $userId)) {
-            throw new \Exception('You have already completed this quiz.');
+        $existingSession = $this->quizSessionRepository->findSession(
+            new FindQuizSessionParam(userId: $userId, quizId: $quizId),
+        );
+
+        // Handle already completed or expired sessions
+        if ($existingSession && ($existingSession->isCompleted() || $existingSession->isExpired())) {
+            $status = $existingSession->isCompleted() ? 'completed' : 'expired';
+            throw new \Exception("Quiz has already been $status.");
         }
 
-        return $this->quizRepository->getQuestions($quizId);
+        // Resume or create new quiz session
+        $session = $existingSession ?? $this->createSession($quizId, $userId);
+        $questions = $this->quizRepository->getQuestions($quizId);
+
+        // Broadcast event
+        UserJoinedQuiz::dispatch($quizId, $userId, $session->id);
+
+        return $questions;
     }
 
     /**
@@ -53,9 +79,24 @@ class QuizService
      *
      * @return int
      */
-    public function submitAnswers(int $userId, Quiz $quiz, array $answers): int
+    public function submitQuizSession(int $sessionId, int $userId, Quiz $quiz): void
     {
-        return $this->quizRepository->submitAnswers($quiz->id, $userId, $answers);
+        $session = $this->quizSessionRepository->findSession(
+            new FindQuizSessionParam(userId: $userId, sessionId: $sessionId, isActive: true),
+        );
+
+        if (!$session) {
+            throw new \Exception('Quiz session not found.');
+        }
+
+        $this->completeSession($session);
+
+        event(new UserSubmittedQuiz($quiz->id, $userId, $session->id));
+    }
+
+    private function completeSession(QuizSession $session): void
+    {
+        $this->quizSessionRepository->completeSession($session);
     }
 
     /**
@@ -65,68 +106,84 @@ class QuizService
      * @return QuizSession
      * @throws \Exception
      */
-    public function joinQuiz(int $quizId, int $userId): QuizSession
+    private function createSession(int $quizId, int $userId): QuizSession
     {
-        if ($this->quizSessionRepository->isCompletedByUser($quizId, $userId)) {
-            throw new \Exception('You have already completed this quiz.');
-        }
+        $quiz = $this->quizRepository->findById($quizId);
 
         // Create a new session
-        return $this->quizSessionRepository->createSession($quizId, $userId);
+        return $this->quizSessionRepository->createSession(
+            new PutQuizSessionParam(
+                quizId: $quizId,
+                userId: $userId,
+                expiredAt: Carbon::now()->addSeconds($quiz->duration)
+            )
+        );
     }
 
-    public function selectOption(int $quizId, int $userId, int $questionId, int $optionId): void
+    /**
+     * Select an option for a question. This method also updates the user's score.
+     *
+     * @param Quiz $quiz
+     * @param Question $question
+     * @param int $userId
+     * @param int $optionId
+     * @param int $sessionId
+     *
+     * @return UserAnswer
+     * @throws \Exception
+     */
+    public function selectOption(Quiz $quiz, Question $question, int $userId, int $optionId, int $sessionId): UserAnswer
     {
-        $answer = $this->quizSessionRepository->findUserAnswer($quizId, $userId, $questionId);
+        // Check if the user has already answered this question
+        $this->ensureNoPreviousAnswer($userId, $sessionId, $question->id);
 
-        if ($answer && $answer->is_final) {
+        // Find active quiz session
+        $session = $this->quizSessionRepository->findSession(new FindQuizSessionParam(
+            userId: $userId,
+            sessionId: $sessionId,
+            isActive: true
+        )) ?? throw new \Exception('Quiz session not found.');
+
+        // Record and return the answer
+        $userAnswer = $this->recordAnswer($question, $session, $userId, $optionId);
+
+        // Broadcast score update event
+        event(new ScoreUpdated($quiz->id, $userId, $session->id));
+
+        return $userAnswer;
+    }
+
+    /**
+     * Ensure the user has not already answered the question.
+     */
+    private function ensureNoPreviousAnswer(int $userId, int $sessionId, int $questionId): void
+    {
+        if ($this->userAnswerRepository->findAnswerOfUser($userId, $sessionId, $questionId)) {
             throw new \Exception('You have already selected an option for this question.');
         }
-
-        // Record the answer
-        $this->quizSessionRepository->recordAnswer($quizId, $userId, $questionId, $optionId);
-
-        // Update temp score only during the quiz
-        $isCorrect = $this->quizSessionRepository->isCorrectOption($questionId, $optionId);
-        $scoreIncrement = $isCorrect ? $this->quizSessionRepository->getQuestionScore($questionId) : 0;
-
-        $this->quizSessionRepository->updateTempScore($quizId, $userId, $scoreIncrement);
-
-        // Broadcast progress update
-        $progress = $this->quizSessionRepository->getQuizProgress($quizId, $userId);
-        event(new ScoreUpdated($quizId, $userId, $progress->temp_score));
-
-        // Broadcast quiz progress update
-        event(new QuizProgressUpdated($quizId, $progress));
     }
 
-    public function completeQuiz(int $quizId, int $userId): void
+    private function recordAnswer(Question $question, QuizSession $session, int $userId, int $optionId): UserAnswer
     {
-        // Finalize the score when the quiz is completed
-        $session = $this->quizSessionRepository->findActiveSession($quizId, $userId);
-        $this->quizSessionRepository->commitTempScoreToTotal($quizId, $userId);
-        $this->quizSessionRepository->completeSession($session->id);
-    }
+        $option = $this->optionRepository->findById($optionId);
+        $isCorrect = (bool) $option->is_correct;
 
-    public function handleTimeout(int $quizId, int $userId): void
-    {
-        $session = $this->quizSessionRepository->findActiveSession($quizId, $userId);
+        // Save the user's answer
+        $userAnswer = $this->userAnswerRepository->save(
+            new PutUserAnswerParam(
+                userId: $userId,
+                question: $question->id,
+                sessionId: $session->id,
+                optionId: $optionId,
+                isCorrect: $isCorrect
+            )
+        );
 
-        if ($session && $this->isTimedOut($session)) {
-            // If timed out, do NOT commit the score to the user's total
-            $this->quizSessionRepository->discardTempScore($quizId, $userId);
-            $this->quizSessionRepository->completeSession($session->id);
-
-            // Broadcast a quiz timeout event if needed
-            event(new QuizTimeout($quizId, $userId));
+        // Update the temporary score if the answer is correct
+        if ($isCorrect) {
+            $this->quizSessionRepository->updateTempScore($session, $question->score);
         }
-    }
 
-    private function isTimedOut($session): bool
-    {
-        $quizDuration = $session->quiz->duration; // Get the quiz duration
-        $elapsedTime = now()->diffInMinutes($session->started_at); // Calculate time since quiz started
-
-        return $elapsedTime >= $quizDuration;
+        return $userAnswer;
     }
 }

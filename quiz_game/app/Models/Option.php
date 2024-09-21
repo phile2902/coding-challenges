@@ -32,4 +32,9 @@ class Option extends Model
     {
         return $this->belongsTo(Question::class);
     }
+
+    public function isCorrect(): bool
+    {
+        return (bool) $this->is_correct;
+    }
 }

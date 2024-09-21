@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -65,5 +66,25 @@ class QuizSession extends Model
 
         $this->score = $totalScore;
         $this->save();
+    }
+
+    /**
+     * Session has expired.
+     *
+     * @return bool
+     */
+    public function isExpired(): bool
+    {
+        return Carbon::parse($this->expired_at)->isPast();
+    }
+
+    /**
+     * Session has completed.
+     *
+     * @return bool
+     */
+    public function isCompleted(): bool
+    {
+        return (bool) $this->is_completed;
     }
 }

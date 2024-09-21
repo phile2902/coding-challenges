@@ -20,7 +20,7 @@ class OptionSeeder extends Seeder
             Option::factory()->count(4)->create([
                 'question_id' => $question->id,
                 'is_correct' => false,
-            ])->first()->update(['is_correct' => true]);
+            ])->first()->update(['is_correct' => 1]);
         });
     }
 }

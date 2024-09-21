@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Models\QuizSession;
+use App\Repositories\Params\FindQuizSessionParam;
+use App\Repositories\Params\PutQuizSessionParam;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +27,17 @@ class EloquentQuizSessionRepository implements QuizSessionRepository
     /**
      * @inheritDoc
      */
+    public function isSessionExpired(int $quizId, int $userId): bool
+    {
+        return QuizSession::where('quiz_id', $quizId)
+            ->where('user_id', $userId)
+            ->where('expired_at', '>', Carbon::now()->toDateTimeString())
+            ->exists();
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function getGlobalLeaderboard(): Collection
     {
         return QuizSession::select('user_id', DB::raw('SUM(score) as total_score'))
@@ -37,59 +50,53 @@ class EloquentQuizSessionRepository implements QuizSessionRepository
     /**
      * @inheritDoc
      */
-    public function createSession(int $quizId, int $userId): QuizSession
+    public function createSession(PutQuizSessionParam $param): QuizSession
     {
-        return QuizSession::create([
-            'quiz_id' => $quizId,
-            'user_id' => $userId,
-            'status' => 'active',
-            'started_at' => Carbon::now(),
-        ]);
+        $data = [
+            'quiz_id' => $param->quizId,
+            'user_id' => $param->userId,
+            'expired_at' => $param->expiredAt?->toDateTimeString(),
+        ];
+
+        return QuizSession::create($data);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function findSession(FindQuizSessionParam $param): QuizSession|null
+    {
+        return QuizSession::query()
+            ->when($param->quizId, fn ($query) => $query->where('quiz_id', $param->quizId))
+            ->when($param->userId, fn ($query) => $query->where('user_id', $param->userId))
+            ->when($param->sessionId, fn ($query) => $query->where('id', $param->sessionId))
+            ->when($param->isActive, fn ($query) => $query->where('expired_at', '>', Carbon::now()->toDateTimeString()))
+            ->first();
     }
 
     /**
      * Update the temp score of a user during a quiz.
      *
-     * @param int $quizId
-     * @param int $userId
+     * @param QuizSession $session
      * @param int $scoreIncrement
      *
      * @return void
      */
-    public function updateTempScore(int $quizId, int $userId, int $scoreIncrement): void
+    public function updateTempScore(QuizSession $session, int $scoreIncrement): void
     {
-        $session = QuizSession::where('quiz_id', $quizId)
-            ->where('user_id', $userId)
-            ->where('status', 'active')
-            ->first();
-
-        if ($session) {
-            $session->temp_score += $scoreIncrement;
-            $session->save();
-        }
+        $session->temp_score += $scoreIncrement;
+        $session->save();
     }
 
     /**
-     * Commit the temp score to the total score of a user.
-     *
-     * @param int $quizId
-     * @param int $userId
-     *
-     * @return void
+     * @inheritDoc
      */
-    public function commitTempScoreToTotal(int $quizId, int $userId): void
+    public function completeSession(QuizSession $session): void
     {
-        $session = QuizSession::where('quiz_id', $quizId)
-            ->where('user_id', $userId)
-            ->where('status', 'active')
-            ->first();
-
-        if ($session) {
-            // Add the temp score to the user's total score and reset temp score
-            $session->score += $session->temp_score;
-            $session->temp_score = 0;
-            $session->save();
-        }
+        $session->score = $session->temp_score;
+        $session->is_completed = true;
+        $session->ended_at = Carbon::now();
+        $session->save();
     }
 
     /**

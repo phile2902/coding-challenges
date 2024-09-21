@@ -1,16 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
-use App\Models\QuizSession;
-use App\Models\UserAnswer;
+use App\Models\Leaderboard;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class UserJoinedQuiz implements ShouldBroadcast
+class UserSubmittedQuiz implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -26,13 +27,11 @@ class UserJoinedQuiz implements ShouldBroadcast
     }
 
     /**
-     * Get the channels the event should broadcast on.
-     *
      * @return Channel
      */
     public function broadcastOn(): Channel
     {
-        return new Channel('quiz.' . $this->quizId . '.session.' . $this->sessionId);
+        return new Channel('quiz.' . $this->quizId);
     }
 
     /**
@@ -40,7 +39,7 @@ class UserJoinedQuiz implements ShouldBroadcast
      */
     public function broadcastAs(): string
     {
-        return 'quiz.joined';
+        return 'quiz.completed';
     }
 
     /**
@@ -48,18 +47,15 @@ class UserJoinedQuiz implements ShouldBroadcast
      */
     public function broadcastWith(): array
     {
-        $userAnswers = UserAnswer::query()
-            ->where('quiz_session_id', $this->sessionId)
-            ->where('user_id', $this->userId)
+        $leaderboard = Leaderboard::query()
+            ->where('quiz_id', $this->quizId)
+            ->orderBy('score', 'desc')
             ->get();
 
-        $quizSession = QuizSession::find($this->sessionId);
-
         return [
+            'leaderboard' => $leaderboard->toArray(),
             'user_id' => $this->userId,
             'quiz_id' => $this->quizId,
-            'session' => $quizSession->toArray(),
-            'user_answers' => $userAnswers->toArray(),
         ];
     }
 }

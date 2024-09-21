@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('quiz_id')->constrained('quizzes')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->integer('rank');
             $table->integer('score');
             $table->timestamps();
             $table->softDeletes();
+            $table->unique(['quiz_id', 'user_id']);
         });
     }
 

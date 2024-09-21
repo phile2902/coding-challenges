@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Leaderboard;
+use App\Models\Quiz;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class LeaderboardSeeder extends Seeder
@@ -12,6 +14,17 @@ class LeaderboardSeeder extends Seeder
      */
     public function run(): void
     {
-        //
+        $quizzes = Quiz::all()->random(5);
+        $users = User::all()->random(5);
+
+        $quizzes->each(function ($quiz) use ($users) {
+            $users->each(function ($user) use ($quiz) {
+                Leaderboard::create([
+                    'user_id' => $user->id,
+                    'score' => random_int(0, 100),
+                    'quiz_id' => $quiz->id,
+                ]);
+            });
+        });
     }
 }

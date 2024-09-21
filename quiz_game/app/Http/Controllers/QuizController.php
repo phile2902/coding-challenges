@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\ScoreUpdated;
-use App\Events\UserJoinedQuiz;
+use App\Http\Requests\GetAvailableQuizzesRequest;
 use App\Http\Requests\JoinQuizRequest;
+use App\Http\Requests\SelectOptionRequest;
 use App\Http\Requests\SubmitQuizAnswersRequest;
+use App\Http\Resources\QuestionResource;
+use App\Http\Resources\QuizResource;
+use App\Http\Resources\UserAnswerResource;
 use App\Models\Question;
 use App\Models\Quiz;
-use App\Models\User;
 use App\Services\QuizService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class QuizController extends Controller
 {
@@ -23,35 +24,38 @@ class QuizController extends Controller
      * GET /quizzes/available
      * Controller Method to fetch available quizzes for a user
      *
-     * @param Request $request
+     * @param GetAvailableQuizzesRequest $request
      *
      * @return JsonResponse
      */
-    public function getAvailableQuizzes(Request $request): JsonResponse
+    public function getAvailableQuizzes(GetAvailableQuizzesRequest $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        $quizzes = $this->quizService->getAvailableQuizzes($userId);
+        $userId = $request->integer('user_id');
+        $page = $request->integer('page', 1); // Default to page 1
+        $perPage = $request->integer('per_page', 10); // Default to 10 quizzes per page
 
-        return response()->json($quizzes);
+        $quizzes = $this->quizService->getAvailableQuizzes($userId)->forPage($page, $perPage);
+
+        return response()->json(QuizResource::collection($quizzes));
     }
 
     /**
-     * GET /quizzes/{quiz}/questions
-     * Controller Method to fetch quiz questions
+     * GET /quizzes/{quiz}/join
+     * Controller Method to join a quiz. It returns the questions for the quiz and creates a session for the user
      *
-     * @param Request $request
+     * @param JoinQuizRequest $request
      * @param Quiz $quiz
      *
      * @return JsonResponse
      */
-    public function getQuizQuestions(Request $request, Quiz $quiz): JsonResponse
+    public function joinQuiz(JoinQuizRequest $request, Quiz $quiz): JsonResponse
     {
         $userId = $request->integer('user_id');
 
         try {
-            $questions = $this->quizService->getQuestions($quiz->id, $userId);
+            $questions = $this->quizService->joinQuiz($quiz->id, $userId);
 
-            return response()->json($questions);
+            return response()->json(QuestionResource::collection($questions));
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 403);
         }
@@ -66,56 +70,44 @@ class QuizController extends Controller
      *
      * @return JsonResponse
      */
-    public function submitQuizAnswers(SubmitQuizAnswersRequest $request, Quiz $quiz): JsonResponse
+    public function submitQuiz(SubmitQuizAnswersRequest $request, Quiz $quiz): JsonResponse
     {
         $userId = $request->input('user_id');
-        $totalScore = $this->quizService->submitAnswers($userId, $quiz, $request->input('answers'));
+        $sessionId = $request->input('quiz_session_id');
 
-        // Broadcast event when score is updated after answers are submitted
-        event(new ScoreUpdated($quiz->id, $userId, $totalScore));
+        try {
+            $this->quizService->submitQuizSession($sessionId, $userId, $quiz);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 403);
+        }
 
         return response()->json([
             'message' => 'Quiz completed successfully',
-            'total_score' => $totalScore,
         ]);
     }
 
-    public function selectOption(Request $request, Quiz $quiz, Question $question): JsonResponse
-    {
-        $userId = $request->input('user_id');
-        $optionId = $request->input('option_id');
-
-        try {
-            $this->quizService->selectOption($quiz->id, $userId, $question->id, $optionId);
-
-            return response()->json(['message' => 'Option selected and score updated'], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 400);
-        }
-    }
-
     /**
-     * POST /quizzes/{quiz}/join
-     * Controller Method to join a quiz
+     * POST /quizzes/{quiz}/questions/{question}/answer
+     * Controller Method to select an option for a question
      *
-     * @param JoinQuizRequest $request
+     * @param SelectOptionRequest $request
      * @param Quiz $quiz
+     * @param Question $question
      *
      * @return JsonResponse
      */
-    public function joinQuiz(JoinQuizRequest $request, Quiz $quiz): JsonResponse
+    public function selectOption(SelectOptionRequest $request, Quiz $quiz, Question $question): JsonResponse
     {
         $userId = $request->input('user_id');
+        $optionId = $request->input('option_id');
+        $sessionId = $request->input('quiz_session_id');
 
         try {
-            $response = $this->quizService->joinQuiz($quiz->id, $userId);
+            $answer = $this->quizService->selectOption($quiz, $question, $userId, $optionId, $sessionId);
 
-            // Broadcast event when user joins a quiz successfully
-            event(new UserJoinedQuiz($quiz->id, User::find($userId)));
-
-            return response()->json($response, 201);
+            return response()->json(UserAnswerResource::make($answer), 201);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 403);
+            return response()->json(['error' => $e->getMessage()], 400);
         }
     }
 }

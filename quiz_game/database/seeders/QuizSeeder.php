@@ -13,12 +13,13 @@ class QuizSeeder extends Seeder
      */
     public function run(): void
     {
-        $user = User::where('email', '=', 'test@example.com')->first();
+        $user = User::where('email', '!=', 'test@example.com')->first();
 
         Quiz::factory()->count(10)->create([
             'created_by' => $user->id,
-            'title' => fake()->title(),
+            'title' => fake()->words(5, true),
             'description' => fake()->sentence(),
+            'duration' => 30 * 60, //1800 seconds
         ]);
     }
 }

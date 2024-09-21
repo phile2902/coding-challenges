@@ -17,22 +17,21 @@ class QuizSessionSeeder extends Seeder
      */
     public function run(): void
     {
-        $users = User::all();
+        $users = User::query()->where('email', '!=', 'test@example.com')->limit(5)->get();
         $quizzes = Quiz::all();
 
         $users->each(function ($user) use ($quizzes) {
             $quizzes->each(function ($quiz) use ($user) {
                 // Create a new quiz session
-                $quizSession = QuizSession::create([
+                QuizSession::create([
                     'quiz_id' => $quiz->id,
                     'user_id' => $user->id,
-                    'status' => 'completed',
-                    'score' => 0,
-                    'started_at' => Carbon::now()->subMinutes(rand(1, 60)),
-                    'ended_at' => Carbon::now(),
+                    'score' => rand(0, 10),
+                    'is_completed' => 1,
+                    'ended_at' => Carbon::now()->subSeconds(rand(1, 1800)),
+                    'expired_at' => Carbon::now(),
+                    'temp_score' => 0,
                 ]);
-
-                $quizSession->calculateScore();
             });
         });
     }
