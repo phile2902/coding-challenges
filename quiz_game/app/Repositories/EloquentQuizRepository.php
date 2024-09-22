@@ -34,14 +34,6 @@ class EloquentQuizRepository implements QuizRepository
     }
 
     /**
-     * @inheritDoc
-     */
-    public function getQuestions(int $quizId): Collection
-    {
-        return Quiz::find($quizId)->questions()->with('options')->get();
-    }
-
-    /**
      * @param int $quizId
      * @param int $userId
      * @param array $answers

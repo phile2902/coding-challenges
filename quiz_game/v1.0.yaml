@@ -42,7 +42,7 @@ paths:
 
   /api/v1/quizzes/{quiz_id}/join:
     get:
-      summary: Join a quiz to play
+      summary: Join a quiz to play. Creates a quiz session for the user.
       parameters:
         - name: quiz_id
           in: path
@@ -57,14 +57,12 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
-          description: A list of questions for the quiz
+        '201':
+          description: Quiz session created successfully and list of questions returned
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Question'
+                $ref: '#/components/schemas/QuizJoined'
         '403':
           description: Forbidden. User does not have access to the quiz
           content:
@@ -314,6 +312,46 @@ components:
           type: string
           format: date-time
           example: "2021-01-01T12:00:00Z"
+
+    QuizJoined:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        score:
+          type: integer
+          example: 1
+        is_completed:
+          type: boolean
+          example: false
+        temp_score:
+          type: integer
+          example: 0
+        expires_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+        ended_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+        created_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2021-01-01T12:00:00Z"
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        user_answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAnswer'
 
     Question:
       type: object

@@ -17,7 +17,7 @@ class UserSubmittedQuiz implements ShouldBroadcast
 
     public int $quizId;
     public int $userId;
-    private int $sessionId;
+    public int $sessionId;
 
     public function __construct(int $quizId, int $userId, int $sessionId)
     {
@@ -31,7 +31,7 @@ class UserSubmittedQuiz implements ShouldBroadcast
      */
     public function broadcastOn(): Channel
     {
-        return new Channel('quiz.' . $this->quizId);
+        return new Channel('quiz');
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Http\Requests\JoinQuizRequest;
 use App\Http\Requests\SelectOptionRequest;
 use App\Http\Requests\SubmitQuizAnswersRequest;
 use App\Http\Resources\QuestionResource;
+use App\Http\Resources\QuizJoinResource;
 use App\Http\Resources\QuizResource;
 use App\Http\Resources\UserAnswerResource;
 use App\Models\Question;
@@ -53,9 +54,9 @@ class QuizController extends Controller
         $userId = $request->integer('user_id');
 
         try {
-            $questions = $this->quizService->joinQuiz($quiz->id, $userId);
+            $session = $this->quizService->joinQuiz($quiz->id, $userId);
 
-            return response()->json(QuestionResource::collection($questions));
+            return response()->json(QuizJoinResource::make($session), 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 403);
         }

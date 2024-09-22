@@ -45,10 +45,10 @@ class QuizService
      * @param int $quizId
      * @param int $userId
      *
-     * @return Collection
+     * @return QuizSession
      * @throws \Exception
      */
-    public function joinQuiz(int $quizId, int $userId): Collection
+    public function joinQuiz(int $quizId, int $userId): QuizSession
     {
         $existingSession = $this->quizSessionRepository->findSession(
             new FindQuizSessionParam(userId: $userId, quizId: $quizId),
@@ -62,12 +62,11 @@ class QuizService
 
         // Resume or create new quiz session
         $session = $existingSession ?? $this->createSession($quizId, $userId);
-        $questions = $this->quizRepository->getQuestions($quizId);
 
         // Broadcast event
-        UserJoinedQuiz::dispatch($quizId, $userId, $session->id);
+        event(new UserJoinedQuiz($quizId, $userId, $session->id));
 
-        return $questions;
+        return $session;
     }
 
     /**

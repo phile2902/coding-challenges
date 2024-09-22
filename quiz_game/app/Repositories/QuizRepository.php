@@ -25,13 +25,4 @@ interface QuizRepository
      * @return Quiz
      */
     public function findById(int $quizId): Quiz;
-
-    /**
-     * Get all questions for a quiz.
-     *
-     * @param int $quizId
-     *
-     * @return Collection<int, Question>
-     */
-    public function getQuestions(int $quizId): Collection;
 }

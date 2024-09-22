@@ -16,7 +16,7 @@ class UserJoinedQuiz implements ShouldBroadcast
 
     public int $quizId;
     public int $userId;
-    private int $sessionId;
+    public int $sessionId;
 
     public function __construct(int $quizId, int $userId, int $sessionId)
     {
