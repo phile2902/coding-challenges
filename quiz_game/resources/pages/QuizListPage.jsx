@@ -15,12 +15,25 @@ const QuizListPage = () => {
         // Fetch leaderboard
         axios.get('/api/leaderboard/global').then((res) => setLeaderboard(res.data));
 
-        // Listen to real-time events
-        const echo = new Echo({ broadcaster: 'pusher', key: process.env.MIX_PUSHER_APP_KEY });
-        echo.channel('global').listen('UserSubmittedQuiz', (e) => {
-            // Update leaderboard in real time
+        // Listen to real-time events via Echo
+        const echo = new Echo({
+            broadcaster: 'pusher',
+            key: import.meta.env.VITE_PUSHER_APP_KEY,
+            cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
+            forceTLS: true,
+        });
+
+        const channel = echo.channel('global');
+        channel.listen('UserSubmittedQuiz', (e) => {
+            // Update leaderboard in real-time
             setLeaderboard((prev) => [...prev, e]);
         });
+
+        // Cleanup listener when component unmounts
+        return () => {
+            channel.stopListening('UserSubmittedQuiz');
+            echo.disconnect();
+        };
     }, []);
 
     return (

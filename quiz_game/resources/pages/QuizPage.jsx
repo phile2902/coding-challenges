@@ -6,7 +6,6 @@ import Echo from 'laravel-echo';
 const QuizPage = () => {
     const { quizId } = useParams();
     const [questions, setQuestions] = useState([]);
-    const [score, setScore] = useState(0);
     const [correctAnswers, setCorrectAnswers] = useState(0);
     const [incorrectAnswers, setIncorrectAnswers] = useState(0);
     const [leftQuestions, setLeftQuestions] = useState(0);
@@ -16,25 +15,41 @@ const QuizPage = () => {
 
     useEffect(() => {
         // Fetch questions
-        axios.get(`/api/quizzes/${quizId}/questions`).then((res) => setQuestions(res.data));
+        axios.get(`/api/quizzes/${quizId}/questions`).then((res) => {
+            setQuestions(res.data);
+            setLeftQuestions(res.data.length); // Initialize left questions
+        });
 
-        // Setup real-time listeners
-        const echo = new Echo({ broadcaster: 'pusher', key: process.env.MIX_PUSHER_APP_KEY });
-        echo.channel(`quiz.${quizId}`).listen('ScoreUpdated', (e) => {
+        // Setup real-time listeners via Echo
+        const echo = new Echo({
+            broadcaster: 'pusher',
+            key: import.meta.env.VITE_PUSHER_APP_KEY,
+            cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
+            forceTLS: true,
+        });
+
+        const channel = echo.channel(`quiz.${quizId}`);
+        channel.listen('ScoreUpdated', (e) => {
             setTempScore(e.temp_score);
         });
 
+        // Countdown timer
         const countdown = setInterval(() => setTimer((prev) => prev - 1), 1000);
-        return () => clearInterval(countdown);
+
+        return () => {
+            clearInterval(countdown);
+            channel.stopListening('ScoreUpdated');
+            echo.disconnect();
+        };
     }, [quizId]);
 
     const handleSubmitAnswer = (questionId, optionId) => {
         axios.post(`/api/quizzes/${quizId}/questions/${questionId}/answer`, { option_id: optionId })
             .then((res) => {
                 setTempScore(res.data.temp_score);
-                setLeftQuestions(leftQuestions - 1);
-                if (res.data.correct) setCorrectAnswers(correctAnswers + 1);
-                else setIncorrectAnswers(incorrectAnswers + 1);
+                setLeftQuestions((prev) => prev - 1);
+                if (res.data.correct) setCorrectAnswers((prev) => prev + 1);
+                else setIncorrectAnswers((prev) => prev + 1);
             });
     };
 
@@ -43,7 +58,7 @@ const QuizPage = () => {
     };
 
     useEffect(() => {
-        if (timer === 0) handleSubmitQuiz();  // Auto submit on timeout
+        if (timer === 0) handleSubmitQuiz();  // Auto-submit when the timer ends
     }, [timer]);
 
     return (
@@ -58,7 +73,10 @@ const QuizPage = () => {
                         <ul>
                             {question.options.map((option) => (
                                 <li key={option.id}>
-                                    <button onClick={() => handleSubmitAnswer(question.id, option.id)} disabled={option.selected}>
+                                    <button
+                                        onClick={() => handleSubmitAnswer(question.id, option.id)}
+                                        disabled={option.selected}
+                                    >
                                         {option.text}
                                     </button>
                                 </li>
