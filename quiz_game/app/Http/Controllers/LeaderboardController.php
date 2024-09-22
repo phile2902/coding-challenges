@@ -9,7 +9,6 @@ use App\Http\Resources\LeaderBoardResource;
 use App\Models\Quiz;
 use App\Services\LeaderboardService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class LeaderboardController extends Controller
 {

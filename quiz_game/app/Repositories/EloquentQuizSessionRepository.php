@@ -38,18 +38,6 @@ class EloquentQuizSessionRepository implements QuizSessionRepository
     /**
      * @inheritDoc
      */
-    public function getGlobalLeaderboard(): Collection
-    {
-        return QuizSession::select('user_id', DB::raw('SUM(score) as total_score'))
-            ->where('is_completed', true) // Only consider completed quizzes
-            ->groupBy('user_id')
-            ->orderByDesc('total_score')
-            ->get();
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function createSession(PutQuizSessionParam $param): QuizSession
     {
         $data = [

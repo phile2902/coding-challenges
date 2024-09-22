@@ -6,13 +6,11 @@ namespace App\Services;
 
 use App\Repositories\LeaderBoardRepository;
 use App\Repositories\Params\FindLeaderBoardParam;
-use App\Repositories\QuizSessionRepository;
 use Illuminate\Support\Collection;
 
 class LeaderboardService
 {
     public function __construct(
-        private QuizSessionRepository $quizSessionRepository,
         private LeaderBoardRepository $leaderBoardRepository
     ) {
     }

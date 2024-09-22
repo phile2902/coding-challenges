@@ -34,6 +34,4 @@ interface QuizRepository
      * @return Collection<int, Question>
      */
     public function getQuestions(int $quizId): Collection;
-
-    public function submitAnswers(int $quizId, int $userId, array $answers): int;
 }

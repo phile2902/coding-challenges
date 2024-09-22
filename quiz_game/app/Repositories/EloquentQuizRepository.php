@@ -41,6 +41,13 @@ class EloquentQuizRepository implements QuizRepository
         return Quiz::find($quizId)->questions()->with('options')->get();
     }
 
+    /**
+     * @param int $quizId
+     * @param int $userId
+     * @param array $answers
+     *
+     * @return int
+     */
     public function submitAnswers(int $quizId, int $userId, array $answers): int
     {
         $totalScore = 0;

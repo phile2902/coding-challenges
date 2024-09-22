@@ -12,13 +12,6 @@ use Illuminate\Support\Collection;
 interface QuizSessionRepository
 {
     /**
-     * Get the global leaderboard of all users based on their total score.
-     *
-     * @return Collection
-     */
-    public function getGlobalLeaderboard(): Collection;
-
-    /**
      * @param PutQuizSessionParam $param
      *
      * @return QuizSession
