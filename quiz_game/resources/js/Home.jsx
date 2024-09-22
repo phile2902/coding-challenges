@@ -4,7 +4,7 @@ import LoginPage from './../pages/LoginPage';
 import QuizListPage from './../pages/QuizListPage';
 import QuizPage from './../pages/QuizPage';
 
-const App = () => {
+const Home = () => {
     return (
         <Router>
             <Routes>
@@ -16,4 +16,4 @@ const App = () => {
     );
 };
 
-export default App;
+export default Home;
