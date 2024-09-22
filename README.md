@@ -11,7 +11,13 @@ I used the following technologies to implement the component:
 - MySQL for the database
 - Docker for containerization
 
-## Acceptance Criteria
+## Architecture Diagram
+https://drive.google.com/file/d/1x8aJePjJdc2edvOLqCA7BredxUcT0OB7/view?usp=sharing
+
+![alt text](quiz_game/resources/images/database.png)
+![alt text](quiz_game/resources/images/server.png)
+
+## Implementation Details
 
 ### 1. **User Participation**
 - **Requirement**: Users should be able to join a quiz session using a unique quiz ID. Multiple users can join the same quiz session simultaneously.
@@ -69,63 +75,36 @@ I used the following technologies to implement the component:
 - **Real-Time Updates**: Real-time updates are implemented using Pusher, a hosted service that provides real-time communication between servers and clients. The backend broadcasts events using Laravel Echo, and the frontend listens for these events to update the UI in real-time.
 - **Docker**: The application is containerized using Docker to ensure consistency across different environments. The backend, frontend, and database are each deployed as separate containers.
 - **Scalability**: The application is designed to be scalable by using a microservices architecture. Each component can be scaled independently to handle a large number of users and quiz sessions.
-- **Performance**: The application is optimized for performance by using caching, lazy loading, and asynchronous processing. The backend uses Eloquent ORM for efficient database queries, and the frontend uses React's virtual DOM for fast rendering.
+- **Performance**: The application is optimized for performance by using asynchronous processing. The backend uses Eloquent ORM for efficient database queries, and the frontend uses React's virtual DOM for fast rendering.
 - **Repository Pattern**: The backend uses the repository pattern to separate data access logic from business logic. This makes the codebase more maintainable and testable.
 - **Temporary Scores**: During the quiz, user scores are tracked as “temporary” scores and only committed to the user’s total once the quiz is completed. If the user fails to complete the quiz within the time limit, their score is discarded.
 - **Leaderboard**: The leaderboard displays the top scorers in real-time and updates as users submit their answers. The leaderboard can be viewed globally or for a specific quiz.
 - **Error Handling**: The application handles errors gracefully by returning appropriate HTTP status codes and error messages. The frontend displays error messages to users when an API request fails.
 - **Event-Driven Architecture**: The application follows an event-driven architecture where events are broadcasted from the backend to the frontend using Pusher. This allows for real-time updates without the need for polling.
 
-## Challenge Requirements
+## Build for the Future
 
-### Part 1: System Design
+1. **Scalability**:
+   - **Horizontal Scaling**: Use Docker and Kubernetes to scale the app horizontally, allowing it to handle many users/quiz sessions.
+   - **Queue Management**: Utilize Redis with Laravel Queues for background processing of real-time events and intensive tasks (e.g., quiz completions).
+   - **Database Optimization**: Implement database sharding and indexing to ensure smooth data retrieval for quizzes and leaderboards as user numbers grow.
 
-1. **System Design Document**:
-   - **Architecture Diagram**: Create an architecture diagram illustrating how different components of the system interact. This should include all components required for the feature, including the server, client applications, database, and any external services.
-   - **Component Description**: Describe each component's role in the system.
-   - **Data Flow**: Explain how data flows through the system from when a user joins a quiz to when the leaderboard is updated.
-   - **Technologies and Tools**: List and justify the technologies and tools chosen for each component.
+2. **Performance**:
+   - **Caching**: Use Redis or Memcached to cache frequently accessed quiz and leaderboard data.
+   - **Lazy Loading**: Implement lazy loading for quiz questions and user data to reduce initial load times.
+   - **Front-end Optimization**: Minimize JavaScript and CSS files with Vite and implement code splitting to load essential components first.
 
-### Part 2: Implementation
+3. **Reliability**:
+    - **Error Recovery**: Implement retry mechanisms for failed API requests and database transactions.
+    - **Fault Tolerance**: Use Kubernetes to ensure high availability and fault tolerance by automatically restarting failed containers.
+    - **Backup and Recovery**: Regularly back up the database and implement disaster recovery plans to restore data in case of failures.
 
-1. **Pick a Component**:
-   - Implement one of the core components below using the technologies that you are comfortable with. The rest of the system can be mocked using mock services or data.
+4. **Maintainability**:
+    - **Code Quality**: Enforce coding standards and best practices using tools like PHP-CS-Fixer and ESLint.
+    - **Automated Testing**: Write unit tests and integration tests to ensure code quality and prevent regressions.
+    - **Documentation**: Maintain up-to-date documentation for the codebase, APIs, and system architecture.
 
-2. **Requirements for the Implemented Component**:
-   - **Real-time Quiz Participation**: Users should be able to join a quiz session using a unique quiz ID.
-   - **Real-time Score Updates**: Users' scores should be updated in real-time as they submit answers.
-   - **Real-time Leaderboard**: A leaderboard should display the current standings of all participants in real-time.
-
-3. **Build For the Future**:
-   - **Scalability**: Design and implement your component with scalability in mind. Consider how the system would handle a large number of users or quiz sessions. Discuss any trade-offs you made in your design and implementation.
-   - **Performance**: Your component should perform well even under heavy load. Consider how you can optimize your code and your use of resources to ensure high performance.
-   - **Reliability**: Your component should be reliable and handle errors gracefully. Consider how you can make your component resilient to failures.
-   - **Maintainability**: Your code should be clean, well-organized, and easy to maintain. Consider how you can make it easy for other developers to understand and modify your code.
-   - **Monitoring and Observability**: Discuss how you would monitor the performance of your component and diagnose issues. Consider how you can make your component observable.
-
-## Submission Guidelines
-
-Candidates are required to submit the following as part of the coding challenge:
-
-1. **System Design Documents**:
-   - **Architecture Diagram**: Illustrate the interaction of system components (server, client applications, database, etc.).
-   - **Component Descriptions**: Explain the role of each component.
-   - **Data Flow**: Describe how data flows from user participation to leaderboard updates.
-   - **Technology Justification**: List the chosen technologies and justify why they were selected.
-
-2. **Working Code**:
-   - Choose one of the core components mentioned in the requirements and implement it using your preferred technologies. The rest of the system can be mocked using appropriate mock services or data.
-   - Ensure the code meets criteria such as scalability, performance, reliability, maintainability, and observability.
-
-3. **Video Submission**:
-   - Record a short video (5-10 minutes) where you address the following:
-     - **Introduction**: Introduce yourself and state your name.
-     - **Assignment Overview**: Describe the technical assignment that ELSA gave in your own words. Feel free to mention any assumptions or clarifications you made.
-     - **Solution Overview**: Provide a crisp overview of your solution, highlighting key design and implementation elements.
-     - **Demo**: Run the code on your local machine and walk us through the output or any tests you’ve written to verify the functionality.
-     - **Conclusion**: Conclude with any remarks, such as challenges faced, learnings, or further improvements you would make.
-
-   **Video Requirements**:
-   - The video must be between **5-10 minutes**. Any submission beyond 10 minutes will be rejected upfront.
-   - Use any recording device (smartphone, webcam, etc.), ensuring good audio and video quality.
-   - Ensure clear and concise communication.
+5. **Monitoring and Observability**:
+   - **Logging**: Implement centralized logging with tools like ELK stack or Splunk to monitor application performance and troubleshoot issues.
+   - **Metrics Collection**: Use Prometheus and Grafana to collect and visualize metrics such as response times, error rates, and resource usage.
+   - **Tracing**: Implement distributed tracing with tools like Jaeger or Zipkin to track requests across microservices and identify bottlenecks.

@@ -10,10 +10,10 @@ const QuizListPage = () => {
 
     useEffect(() => {
         // Fetch quizzes
-        axios.get('/api/quizzes/available').then((res) => setQuizzes(res.data));
+        axios.get('/api/v1/quizzes/available').then((res) => setQuizzes(res.data));
 
         // Fetch leaderboard
-        axios.get('/api/leaderboard/global').then((res) => setLeaderboard(res.data));
+        axios.get('/api/v1/leaderboard/global').then((res) => setLeaderboard(res.data));
 
         // Listen to real-time events via Echo
         const echo = new Echo({
