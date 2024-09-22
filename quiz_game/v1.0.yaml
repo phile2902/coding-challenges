@@ -151,8 +151,8 @@ paths:
                   type: integer
                   example: 1
                 option_id:
-                  type: string
-                  example: "Paris"
+                    type: integer
+                    example: 1
       responses:
         '201':
           description: Answer submitted successfully

@@ -19,6 +19,8 @@ return new class extends Migration
             $table->foreignId('selected_option_id')->nullable()->constrained('options')->onDelete('set null');
             $table->boolean('is_correct')->nullable();
             $table->timestamps();
+            $table->softDeletes();
+            $table->unique(['user_id', 'question_id', 'quiz_session_id']);
         });
     }
 

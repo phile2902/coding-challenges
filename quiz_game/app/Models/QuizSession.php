@@ -17,16 +17,18 @@ class QuizSession extends Model
         'user_id',
         'score',
         'status',
-        'started_at',
         'ended_at',
+        'expired_at',
+        'is_completed',
+        'temp_score',
     ];
 
     protected $casts = [
-        'started_at' => 'datetime',
         'ended_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'expired_at' => 'datetime',
     ];
 
     protected $table = 'quiz_sessions';
@@ -45,27 +47,6 @@ class QuizSession extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Assigns a score to the quiz session based on the user's answers.
-     *
-     * @return void
-     */
-    public function calculateScore(): void
-    {
-        $totalScore = 0;
-
-        foreach ($this->quiz->questions as $question) {
-            $userAnswer = $this->user->answers->where('question_id', $question->id)->first();
-
-            if ($userAnswer && $userAnswer->selected_option_id === $question->correctOption->id) {
-                $totalScore += $question->score;
-            }
-        }
-
-        $this->score = $totalScore;
-        $this->save();
     }
 
     /**
