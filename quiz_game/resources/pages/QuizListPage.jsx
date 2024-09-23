@@ -37,7 +37,7 @@ export default function QuizListPage() {
         const channel = echo.channel("quiz");
         channel.listen(".quiz.completed", (e) => {
             // Update leaderboard in real-time
-            setLeaderboard((prev) => [...prev, e.leaderboard]);
+            setLeaderboard((prev) => [...prev, e.global_leaderboard]);
         });
 
         // Cleanup listener when component unmounts
